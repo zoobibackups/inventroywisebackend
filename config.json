@@ -1,0 +1,19 @@
+﻿{
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "root",
+        "password": "Tikt0k@1",
+        "database": "property"
+    },
+    "secret": "THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING",
+    "emailFrom": "admin@propelinspections.com",
+    "smtpOptions": {
+        "host": "propelinspections.com",
+        "port": 465,
+        "auth": {
+            "user": "admin@propelinspections.com",
+            "pass": "kv1$@eYslu~*"
+        }
+    }
+}
