@@ -101,10 +101,13 @@ function register(req, res, next) {
 }
 
 function verifyEmail(req, res, next) {
+	//res.json({ message: "Verification successful, you can now login", token: req.params.token });
 	accountService
 		.verifyEmail(req.params.token)
-		.then(() => res.json({ message: "Verification successful, you can now login" }))
-		.catch(next);
+		.then((data) => res.json(data))
+		.catch((err) => {
+			res.json(err);
+		});
 }
 
 function forgotPassword(req, res, next) {

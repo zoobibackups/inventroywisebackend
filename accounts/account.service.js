@@ -110,14 +110,24 @@ async function register(params, origin) {
 	});
 }
 
-async function verifyEmail({ token }) {
-	const account = await db.Account.findOne({ where: { verificationToken: token } });
-
-	if (!account) throw "Verification failed";
-
-	account.verified = Date.now();
-	account.verificationToken = null;
-	await account.save();
+async function verifyEmail(token) {
+	return new Promise(async (resolve, reject) => {
+		const account = await db.Account.findOne({ where: { verificationToken: token } });
+		if (!account) {
+			reject({
+				status: false,
+				message: "Your account has already verified. Please Login",
+			});
+		} else {
+			account.verified = Date.now();
+			account.verificationToken = null;
+			await account.save();
+			resolve({
+				status: true,
+				message: "Your account has been registered successfully",
+			});
+		}
+	});
 }
 
 async function forgotPassword(email) {
@@ -263,8 +273,8 @@ function basicDetails(account) {
 }
 
 async function sendVerificationEmail(account) {
-	const verifyUrl = `https://api.propelinspections.com/inventory/accounts/verify-email?token=${account.verificationToken}`;
-	letmessage = `<p>Please click the below link to verify your email address:</p>
+	const verifyUrl = `https://api.propelinspections.com/inventory/accounts/verify-email/${account.verificationToken}`;
+	let message = `<p>Please click the below link to verify your email address:</p>
                    <p><a href="${verifyUrl}">${verifyUrl}</a></p>`;
 
 	await sendEmail({
