@@ -113,8 +113,8 @@ function verifyEmail(req, res, next) {
 function forgotPassword(req, res, next) {
 	accountService
 		.forgotPassword(req.query.email, req.get("origin"))
-		.then(() => res.json({ message: "Please check your email for password reset instructions" }))
-		.catch(next);
+		.then((data) => res.json(data))
+		.catch((err) => res.json(err));
 }
 
 function validateResetTokenSchema(req, res, next) {

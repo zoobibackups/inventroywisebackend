@@ -26,26 +26,27 @@ module.exports = {
 };
 
 async function authenticate({ email, password, ipAddress }) {
-	const account = await db.Account.scope("withHash").findOne({ where: { email } });
+	return new Promise(async (resolve, reject) => {
+		const account = await db.Account.scope("withHash").findOne({ where: { email } });
 
-	if (!account || !(await bcrypt.compare(password, account.passwordHash))) {
-		// || !account.isVerified
-		throw "Email or password is incorrect";
-	}
-
-	// authentication successful so generate jwt and refresh tokens
-	const jwtToken = generateJwtToken(account);
-	const refreshToken = generateRefreshToken(account, ipAddress);
-
-	// save refresh token
-	await refreshToken.save();
-
-	// return basic details and tokens
-	return {
-		...basicDetails(account),
-		jwtToken,
-		refreshToken: refreshToken.token,
-	};
+		if (!account || !(await bcrypt.compare(password, account.passwordHash))) {
+			reject({
+				status: false,
+				message: "Email or password does not match to any account",
+			});
+		} else if (!account.isVerified) {
+			reject({
+				status: false,
+				message: "Your account is not verified. Please check Your Email or  contact admin",
+			});
+		} else {
+			resolve({
+				status: true,
+				message: "Login Successfull",
+				data: basicDetails(account),
+			});
+		}
+	});
 }
 
 async function refreshToken({ token, ipAddress }) {
@@ -131,14 +132,26 @@ async function verifyEmail(token) {
 }
 
 async function forgotPassword(email) {
-	const account = await db.Account.findOne({ where: { email } });
-	if (!account) return;
-	const password = Math.random().toString(36).slice(2).toUpperCase();
-	account.passwordHash = await hash(password);
-	account.passwordReset = Date.now();
-	account.resetToken = null;
-	await account.save();
-	await sendPasswordResetEmail(account, password);
+	return new Promise(async (reslove, reject) => {
+		const account = await db.Account.findOne({ where: { email } });
+		if (!account) {
+			reject({
+				status: false,
+				message: "Please check email, no account found associated with your email",
+			});
+		} else {
+			const password = Math.random().toString(36).slice(2).toUpperCase();
+			account.passwordHash = await hash(password);
+			account.passwordReset = Date.now();
+			account.resetToken = null;
+			await account.save();
+			await sendPasswordResetEmail(account, password);
+			reslove({
+				status: false,
+				message: "Please check your Email. New password has been sent to your email account.",
+			});
+		}
+	});
 }
 
 async function validateResetToken({ token }) {
