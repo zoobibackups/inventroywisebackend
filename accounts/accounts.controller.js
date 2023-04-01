@@ -11,18 +11,17 @@ router.post("/authenticate", authenticateSchema, authenticate);
 router.post("/refresh-token", refreshToken);
 router.post("/revoke-token", authorize(), revokeTokenSchema, revokeToken);
 router.post("/register", registerSchema, register);
-router.post("/verify-email", verifyEmailSchema, verifyEmail);
-router.post("/forgot-password", forgotPasswordSchema, forgotPassword);
+router.get("/verify-email/:token", verifyEmail);
+router.get("/forgot-password", forgotPassword);
 router.post("/validate-reset-token", validateResetTokenSchema, validateResetToken);
 router.post("/reset-password", resetPasswordSchema, resetPassword);
 router.get("/reject/:id", authorize(Role.Admin), rejectUser);
 router.get("/approve/:id", authorize(Role.Admin), approveUser);
-router.get("/", authorize(Role.Admin), getAll);
+router.get("/", authorize([Role.Admin, Role.Moderator]), getAll);
 router.get("/:id", authorize(), getById);
 router.post("/", authorize(Role.Admin), createSchema, create);
 router.put("/:id", authorize(), updateSchema, update);
 router.delete("/:id", authorize(), _delete);
-
 module.exports = router;
 
 function authenticateSchema(req, res, next) {
@@ -35,12 +34,10 @@ function authenticateSchema(req, res, next) {
 
 function authenticate(req, res, next) {
 	const { email, password } = req.body;
-	console.log("🚀 ~ file: accounts.controller.js:36 ~ authenticate ~ req.body", req.body);
 	const ipAddress = "192.168.18.11";
 	accountService
 		.authenticate({ email, password, ipAddress })
 		.then(({ refreshToken, ...account }) => {
-			setTokenCookie(res, refreshToken);
 			res.json(account);
 		})
 		.catch(next);
@@ -66,17 +63,12 @@ function revokeTokenSchema(req, res, next) {
 }
 
 function revokeToken(req, res, next) {
-	// accept token from request body or cookie
 	const token = req.body.token || req.cookies.refreshToken;
 	const ipAddress = req.ip;
-
 	if (!token) return res.status(400).json({ message: "Token is required" });
-
-	// users can revoke their own tokens and admins can revoke any tokens
 	if (!req.user.ownsToken(token) && req.user.role !== Role.Admin) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
-
 	accountService
 		.revokeToken({ token, ipAddress })
 		.then(() => res.json({ message: "Token revoked" }))
@@ -98,13 +90,14 @@ function registerSchema(req, res, next) {
 
 function register(req, res, next) {
 	accountService
-		.register(req.body, req.get("origin"))
-		.then(() =>
+		.register(req.body, req.headers.host)
+		.then((data) => res.json(data))
+		.catch((err) => {
 			res.json({
-				message: "Registration successful, please check your email for verification instructions",
-			})
-		)
-		.catch(next);
+				status: false,
+				message: "There is some issue with the server. Please Try again later",
+			});
+		});
 }
 
 function verifyEmailSchema(req, res, next) {
@@ -121,16 +114,9 @@ function verifyEmail(req, res, next) {
 		.catch(next);
 }
 
-function forgotPasswordSchema(req, res, next) {
-	const schema = Joi.object({
-		email: Joi.string().email().required(),
-	});
-	validateRequest(req, next, schema);
-}
-
 function forgotPassword(req, res, next) {
 	accountService
-		.forgotPassword(req.body, req.get("origin"))
+		.forgotPassword(req.query.email, req.get("origin"))
 		.then(() => res.json({ message: "Please check your email for password reset instructions" }))
 		.catch(next);
 }
