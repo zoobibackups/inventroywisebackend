@@ -32,17 +32,20 @@ async function authenticate({ email, password, ipAddress }) {
 		if (!account || !(await bcrypt.compare(password, account.passwordHash))) {
 			reject({
 				status: false,
+				title: "Account Not Found",
 				message: "Email or password does not match to any account",
 			});
 		} else if (!account.isVerified) {
 			reject({
 				status: false,
+				title: "Login Error, account is not verified",
 				message: "Your account is not verified. Please check Your Email or  contact admin",
 			});
 		} else {
 			resolve({
 				status: true,
-				message: "Login Successfull",
+				title: "Login Successfull",
+				message: "you have Logged in Successfully",
 				data: basicDetails(account),
 			});
 		}
@@ -88,6 +91,7 @@ async function register(params, origin) {
 		if (user != null) {
 			resolve({
 				status: false,
+				title: "Duplicate Email Provided",
 				message: "The email account is already registered.",
 			});
 		} else {
@@ -103,6 +107,7 @@ async function register(params, origin) {
 			await account.save();
 			resolve({
 				status: true,
+				title: "Account Registeration Successfull",
 				message: "A Verification email has been  sent to your email address. Before Login Please verify your email address",
 			});
 			// send email
@@ -137,6 +142,7 @@ async function forgotPassword(email) {
 		if (!account) {
 			reject({
 				status: false,
+				title: "Password Reset Error",
 				message: "Please check email, no account found associated with your email",
 			});
 		} else {
@@ -147,7 +153,8 @@ async function forgotPassword(email) {
 			await account.save();
 			await sendPasswordResetEmail(account, password);
 			reslove({
-				status: false,
+				status: true,
+				title: "Password Reset Successfull",
 				message: "Please check your Email. New password has been sent to your email account.",
 			});
 		}

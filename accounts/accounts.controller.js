@@ -5,6 +5,7 @@ const validateRequest = require("../_middleware/validate-request");
 const authorize = require("../_middleware/authorize");
 const Role = require("../_helpers/role");
 const accountService = require("./account.service");
+const { json } = require("body-parser");
 
 // routes
 router.post("/authenticate", authenticateSchema, authenticate);
@@ -40,7 +41,7 @@ function authenticate(req, res, next) {
 		.then(({ refreshToken, ...account }) => {
 			res.json(account);
 		})
-		.catch(next);
+		.catch((err) => res.json(err));
 }
 
 function refreshToken(req, res, next) {
@@ -80,10 +81,15 @@ function registerSchema(req, res, next) {
 		title: Joi.string().required(),
 		firstName: Joi.string().required(),
 		lastName: Joi.string().required(),
-		email: Joi.string().email().required(),
-		password: Joi.string().min(6).required(),
+		email: Joi.string().required(),
+		password: Joi.string().min(4).required(),
 		confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
 		acceptTerms: Joi.boolean().valid(true).required(),
+		company_name: Joi.string().required(),
+		company_address: Joi.string().required(),
+		mobile_number: Joi.string().required(),
+		company_email: Joi.string().required(),
+		company_logo: Joi.string().required(),
 	});
 	validateRequest(req, next, schema);
 }

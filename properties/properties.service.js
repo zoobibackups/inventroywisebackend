@@ -129,14 +129,17 @@ async function create(params) {
 				await property_detail.save().then((res) => {
 					if (property_detail && property_detail.id && images.length > 0) {
 						images.map(async (link) => {
-							const propertyDetailImage = {
-								propertyDetailId: property_detail.id,
-								url: link,
-							};
-							const property_detail_image = await new db.Property_images(
-								propertyDetailImage
-							);
-							await property_detail_image.save();
+							if (link !== null || link !== undefined || link !== "") {
+								const propertyDetailImage = {
+									propertyDetailId: property_detail.id,
+									url: link,
+								};
+								const property_detail_image =
+									await new db.Property_images(
+										propertyDetailImage
+									);
+								await property_detail_image.save();
+							}
 						});
 					}
 				});
