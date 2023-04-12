@@ -6,6 +6,7 @@ const { Op } = require("sequelize");
 const sendEmail = require("../_helpers/send-email");
 const db = require("../_helpers/db");
 const Role = require("../_helpers/role");
+const { log } = require("console");
 
 module.exports = {
 	authenticate,
@@ -99,7 +100,8 @@ async function register(params, origin) {
 			const isFirstAccount = (await db.Account.count()) === 0;
 			account.role = isFirstAccount ? Role.Admin : Role.User;
 			account.verificationToken = randomTokenString();
-
+			const jwtToken = generateJwtToken(account);
+			console.log(jwtToken, "jwtToken");
 			// hash password
 			account.passwordHash = await hash(params.password);
 

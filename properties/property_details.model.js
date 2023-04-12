@@ -10,6 +10,7 @@ function model(sequelize) {
 		walls: { type: DataTypes.STRING, allowNull: true },
 		ceiling: { type: DataTypes.STRING, allowNull: true },
 		windows: { type: DataTypes.STRING, allowNull: true },
+		doors: { type: DataTypes.STRING, allowNull: true },
 		created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
 		updated: { type: DataTypes.DATE },
 	};

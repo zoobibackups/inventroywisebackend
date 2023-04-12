@@ -45,6 +45,7 @@ function authenticate(req, res, next) {
 }
 
 function refreshToken(req, res, next) {
+	
 	const token = req.cookies.refreshToken;
 	const ipAddress = req.ip;
 	accountService
@@ -200,6 +201,11 @@ function updateSchema(req, res, next) {
 		email: Joi.string().email().empty(""),
 		password: Joi.string().min(6).empty(""),
 		confirmPassword: Joi.string().valid(Joi.ref("password")).empty(""),
+		company_name: Joi.string().required(),
+		company_address: Joi.string().required(),
+		mobile_number: Joi.string().required(),
+		company_email: Joi.string().required(),
+		company_logo: Joi.string().required(),
 	};
 
 	// only admins can update role
