@@ -2,10 +2,10 @@
 const db = require("../_helpers/db");
 const moment = require("moment");
 const puppeteer = require("puppeteer");
-const path = require("path");
+const path = require('path');
 const { log } = require("console");
-const parentDir = path.resolve(__dirname, "..");
-const API_URL = "https://api.propelinspections.com/inventory/";
+const parentDir = path.resolve(__dirname, '..');
+const API_URL = "https://api.propelinspections.com/inventory/"
 module.exports = {
 	getAll,
 	getById,
@@ -115,9 +115,9 @@ async function create(params) {
 	};
 
 	const property = await new db.Property(propertyInfo);
-	await property.save().then(async (res) => {
+	await property.save().then((res) => {
 		if (property && property.id && property_details.length > 0) {
-			for (const property_de of property_details) {
+			property_details.map(async (property_de) => {
 				const { images } = property_de;
 				const propertyDetail = {
 					propertyId: property.id,
@@ -125,38 +125,40 @@ async function create(params) {
 					description: property_de.description,
 					floor: property_de.floor,
 					walls: property_de.walls,
-					doors: property_de.doors,
+                    doors:property_de.doors,
 					ceiling: property_de.ceiling,
 					windows: property_de.windows,
 				};
-				const property_detail = new db.Property_details(propertyDetail);
-				await property_detail.save(); // Await property_detail save
-
-				if (property_detail && property_detail.id && images.length > 0) {
-					for (const link of images) {
-						if (link !== null || link !== undefined || link !== "") {
-							const propertyDetailImage = {
-								propertyDetailId: property_detail.id,
-								url: link,
-							};
-							const property_detail_image = new db.Property_images(
-								propertyDetailImage
-							);
-							await property_detail_image.save(); // Await property_detail_image save
-						}
+				const property_detail = await new db.Property_details(propertyDetail);
+				await property_detail.save().then((res) => {
+					if (property_detail && property_detail.id && images.length > 0) {
+						images.map(async (link) => {
+							if (link !== null || link !== undefined || link !== "") {
+								const propertyDetailImage = {
+									propertyDetailId: property_detail.id,
+									url: link,
+								};
+								const property_detail_image =
+									await new db.Property_images(
+										propertyDetailImage
+									);
+								await property_detail_image.save();
+							}
+						});
 					}
-				}
-			}
+				});
+			});
 		}
 	});
 
 	await sendPropertyEmail({
 		account: account.dataValues,
-		propertyInfo: propertyInfo,
-		property_details: property_details,
-		signature_inspector: params.signature_inspector,
-		signature_tenant: params.signature_tenant,
-	});
+		propertyInfo:propertyInfo,
+		property_details:property_details,
+		signature_inspector:params.signature_inspector,
+		signature_tenant:params.signature_tenant
+    }
+	);
 
 	return property;
 }
@@ -204,8 +206,8 @@ async function getProperty(id) {
 	return property;
 }
 
-async function sendPropertyEmail({ account, propertyInfo, property_details, signature_inspector, signature_tenant }) {
-	let message = `<!doctype html>
+async function sendPropertyEmail({account, propertyInfo, property_details, signature_inspector, signature_tenant}) {
+    let message = `<!doctype html>
     <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -581,11 +583,8 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
             <h1 class="bg-blue">${propertyInfo.types}</h1>
             <h2 class="propertyAddress">${propertyInfo.property_address}s</h2>
             <div class="propertyimg">
-            ${
-			propertyInfo.main_img != "" && propertyInfo.main_img != null
-				? `<img src="${API_URL}${propertyInfo.main_img}" alt="property Image">`
-				: ``
-		}
+            ${propertyInfo.main_img != '' && propertyInfo.main_img != null ?  
+              `<img src="${API_URL}${propertyInfo.main_img}" alt="property Image">`:``}
             </div>
         <div class="firsttable">
         <table>
@@ -601,19 +600,19 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                 
                 <tr>
                   <td style="font-weight: bold;">Date of Inspection</td>
-                  <td>${moment(propertyInfo.inspection_date).format("DD-MMM-YYYY")}</td>
+                  <td>${moment(propertyInfo.inspection_date).format('DD-MMM-YYYY')}</td>
                 </tr>
                 <tr>
                   <td style="font-weight: bold;">EPC Expiry Date</td>
-                  <td>${moment(propertyInfo.ecp_exp_date).format("DD-MMM-YYYY")}</td>
+                  <td>${moment(propertyInfo.ecp_exp_date).format('DD-MMM-YYYY')}</td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold;">Gas Safety Certificate Expiry Date</td>
-                    <td>${moment(propertyInfo.gas_safety_certificate_exp_date).format("DD-MMM-YYYY")}</td>
+                    <td>${moment(propertyInfo.gas_safety_certificate_exp_date).format('DD-MMM-YYYY')}</td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold;">EICR Expiry Date</td>
-                    <td>${moment(propertyInfo.ecir_exp_date).format("DD-MMM-YYYY")}</td>
+                    <td>${moment(propertyInfo.ecir_exp_date).format('DD-MMM-YYYY')}</td>
                 </tr>
               
             </tbody>
@@ -722,13 +721,9 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                           <span style="color:#000000" class="gas">${propertyInfo.gas_meter_reading}</span>
                         </div>
                     </div>
-                    ${
-				propertyInfo.gas_meter_img != null && propertyInfo.gas_meter_img != ""
-					? `<div class="gas-img"> 
+                    ${propertyInfo.gas_meter_img != null && propertyInfo.gas_meter_img != "" ?`<div class="gas-img"> 
                       <img src="${API_URL}${propertyInfo.gas_meter_img}" width="100%" height="auto"> 
-                    </div>`
-					: ``
-			}
+                    </div>`:``}
                 </div>
                 
                 <div class="card">
@@ -742,13 +737,10 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                           <span style="color:#000000" class="gas">${propertyInfo.electricity_meter_reading}</span>
                         </div>
                     </div>
-                   ${
-				propertyInfo.electricity_meter_img != null && propertyInfo.electricity_meter_img != ""
-					? `<div class="gas-img"> 
+                   ${propertyInfo.electricity_meter_img != null && propertyInfo.electricity_meter_img != "" ? 
+                    `<div class="gas-img"> 
                       <img src="${API_URL}${propertyInfo.electricity_meter_img}" width="100%" height="auto"> 
-                    </div>`
-					: ``
-			}
+                    </div>`:``}
                 </div>
     
                 
@@ -761,13 +753,10 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                           <span style="color:#000000" class="gas">${propertyInfo.heating_system}</span>
                         </div>
                     </div>
-                    ${
-				propertyInfo.heating_system_img != "" && propertyInfo.heating_system_img != null
-					? `<div class="gas-img">
+                    ${propertyInfo.heating_system_img != "" && propertyInfo.heating_system_img != null ? 
+                    `<div class="gas-img">
                       <img src="${API_URL}${propertyInfo.heating_system_img}" width="100%" height="auto">
-                    </div>`
-					: ``
-			}
+                    </div>`:``}
                 </div>
     
     
@@ -782,13 +771,9 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                           <span  style="color:#000000" class="gas">${propertyInfo.water_meter_reading}</span>
                         </div>
                     </div>
-                   ${
-				propertyInfo.water_meter_img != "" && propertyInfo.water_meter_img != null
-					? `<div class="gas-img">
+                   ${propertyInfo.water_meter_img != "" && propertyInfo.water_meter_img != null ? `<div class="gas-img">
                       <img src="${API_URL}${propertyInfo.water_meter_img}" width="100%" height="auto">
-                    </div>`
-					: ``
-			}
+                    </div>`:``}
                 </div> 
             </div>
             <div class="parent">
@@ -801,16 +786,8 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                         </div>
                     </div>
                     <div class="image-grid"> 
-                      ${
-				propertyInfo.smoke_alarm_front_img != "" && propertyInfo.smoke_alarm_front_img != null
-					? `<img src="${API_URL}${propertyInfo.smoke_alarm_front_img}" style="margin-top: 10px;" width="48%" height="auto" />`
-					: ``
-			}  
-                      ${
-				propertyInfo.smoke_alarm_back_img != "" && propertyInfo.smoke_alarm_back_img != null
-					? `<img src="${API_URL}${propertyInfo.smoke_alarm_back_img}"   style="margin-top: 10px;" width="48%" height="auto" />`
-					: ``
-			}
+                      ${propertyInfo.smoke_alarm_front_img != "" && propertyInfo.smoke_alarm_front_img != null ?`<img src="${API_URL}${propertyInfo.smoke_alarm_front_img}" style="margin-top: 10px;" width="48%" height="auto" />`:``}  
+                      ${propertyInfo.smoke_alarm_back_img != "" && propertyInfo.smoke_alarm_back_img != null ?`<img src="${API_URL}${propertyInfo.smoke_alarm_back_img}"   style="margin-top: 10px;" width="48%" height="auto" />`:``}
                     </div>
                 </div>
     
@@ -822,16 +799,8 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                         </div>
                     </div>
                     <div class="image-grid"> 
-                    ${
-				propertyInfo.co_alarm_front_img != "" && propertyInfo.co_alarm_front_img != null
-					? `<img src="${API_URL}${propertyInfo.co_alarm_front_img}"  style="margin-top: 10px;" width="48%" height="auto" />`
-					: ``
-			}
-                    ${
-				propertyInfo.co_alarm_back_img != "" && propertyInfo.co_alarm_back_img != null
-					? `<img src="${API_URL}${propertyInfo.co_alarm_back_img}"   style="margin-top: 10px;" width="48%" height="auto" />`
-					: ``
-			}
+                    ${propertyInfo.co_alarm_front_img != "" && propertyInfo.co_alarm_front_img != null ? `<img src="${API_URL}${propertyInfo.co_alarm_front_img}"  style="margin-top: 10px;" width="48%" height="auto" />`:``}
+                    ${propertyInfo.co_alarm_back_img != "" && propertyInfo.co_alarm_back_img != null ?  `<img src="${API_URL}${propertyInfo.co_alarm_back_img}"   style="margin-top: 10px;" width="48%" height="auto" />`:``}
                     </div>
                 </div>
             </div>
@@ -839,9 +808,8 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
     </section>
     
       <section class="top-margin">
-       ${property_details
-		.map((item, index) => {
-			return `<div class="">   
+       ${property_details.map((item, index) => {
+         return `<div class="">   
          <div class="room">
              <h3 class="blue">${item.name}</h3>
              <table class="table22"  style="width:100%; margin-bottom:10px ">
@@ -853,11 +821,10 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                  </thead>
                  <tbody>
                      <tr>
-                     ${
-				item.name == "Rear Garden"
-					? `<td style="font-weight: bold;">Lawn</td>`
-					: `<td style="font-weight: bold;">Floor</td>`
-			}
+                     ${item.name == "Rear Garden" ? 
+                        `<td style="font-weight: bold;">Lawn</td>` : 
+                        `<td style="font-weight: bold;">Floor</td>`
+                      }
                      
                          <td>${item.floor}</td>
                      </tr>
@@ -866,13 +833,12 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
                          <td>${item.walls}</td>
                      </tr>
                      <tr>
-                        ${
-				item.name == "Kitchen"
-					? `<td style="font-weight: bold;">Appliances</td>`
-					: item.name == "Rear Garden"
-					? `<td style="font-weight: bold;">Fence</td>`
-					: `<td style="font-weight: bold;">Ceiling</td>`
-			}
+                        ${item.name == "Kitchen" ? 
+                        `<td style="font-weight: bold;">Appliances</td>` : 
+                        item.name == "Rear Garden" ?
+                        `<td style="font-weight: bold;">Fence</td>` :
+                        `<td style="font-weight: bold;">Ceiling</td>`
+                      }
                          <td>${item.ceiling}</td>
                      </tr>
                      <tr>
@@ -892,15 +858,12 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
              </table>
          </div>
          <div class="image-grid">
-            ${item.images
-			.map((img, index) => {
-				return `<img src="${API_URL}${img}" class="imgRoom" width="31.6%" height="auto" />`;
-			})
-			.join("")}
+            ${item.images.map((img, index) => {
+                return `<img src="${API_URL}${img}" class="imgRoom" width="31.6%" height="auto" />`;
+            }).join("")}
          </div>
-     </div>`;
-		})
-		.join("")} 
+     </div>`
+       }).join("")} 
       </section>  
       <section>
       <div class="tennat">
@@ -934,40 +897,40 @@ async function sendPropertyEmail({ account, propertyInfo, property_details, sign
     </body>
     </html>`;
 
-	(async () => {
-		const browser = await puppeteer.launch({
-			headless: true,
-			args: [
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-gpu",
-				"--hide-scrollbars",
-				"--disable-web-security",
-			],
-		});
-		const page = await browser.newPage();
-		await page.setContent(message, {
-			waitUntil: "load",
-			printBackground: true,
-		});
-		await page.addStyleTag({
-			content: `* { page-break-inside: avoid; }`,
-		});
-		var name = `${account.firstName}${moment().unix()}.pdf`;
-		const screenshotPath = path.join(parentDir, "uploads", name);
-
-		await page.pdf({
-			path: screenshotPath,
-			margin: { top: "20px", right: "10px", bottom: "10px", left: "10px" },
-			printBackground: true,
-			format: "A4",
-		});
-		await sendEmail({
-			to: account.email,
-			subject: "Property Detail Reports",
-			html: `You can download details report of the property from the following link , <a href="https://api.propelinspections.com/uploads/${name}">Download Report</a>`,
-		});
-		//   // close the browser
-		await browser.close();
-	})();
+ (async () => {
+ const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--hide-scrollbars',
+        '--disable-web-security',
+    ]
+  });
+  const page = await browser.newPage();
+  await page.setContent(message, {
+    waitUntil:"load",
+    printBackground: true,
+  });
+  await page.addStyleTag({
+    content:  `* { page-break-inside: avoid; }`,
+  });
+  var name = `${account.firstName}${moment().unix()}.pdf`
+  const screenshotPath = path.join(parentDir, 'uploads',name);
+  
+  await page.pdf({
+    path: screenshotPath,
+    margin: { top: '20px', right: '10px', bottom: '10px', left: '10px' },
+    printBackground: true,
+    format: 'A4',
+  });
+  await sendEmail({
+    to: account.email,
+    subject: "Property Detail Reports",
+    html: `You can download details report of the property from the following link , <a href="https://api.propelinspections.com/uploads/${name}">Download Report</a>`,
+  });
+//   // close the browser
+await browser.close();
+})();
 }
