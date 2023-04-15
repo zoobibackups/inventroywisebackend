@@ -10,19 +10,19 @@ const { json } = require("body-parser");
 // routes
 router.post("/authenticate", authenticateSchema, authenticate);
 router.post("/refresh-token", refreshToken);
-router.post("/revoke-token", authorize(), revokeTokenSchema, revokeToken);
+router.post("/revoke-token", revokeTokenSchema, revokeToken);
 router.post("/register", registerSchema, register);
 router.get("/verify-email/:token", verifyEmail);
 router.get("/forgot-password", forgotPassword);
 router.post("/validate-reset-token", validateResetTokenSchema, validateResetToken);
 router.post("/reset-password", resetPasswordSchema, resetPassword);
-router.get("/reject/:id", authorize(Role.Admin), rejectUser);
-router.get("/approve/:id", authorize(Role.Admin), approveUser);
-router.get("/", authorize([Role.Admin, Role.Moderator]), getAll);
-router.get("/:id", authorize(), getById);
-router.post("/", authorize(Role.Admin), createSchema, create);
-router.put("/:id", authorize(), updateSchema, update);
-router.delete("/:id", authorize(), _delete);
+router.get("/reject/:id", rejectUser);
+router.get("/approve/:id", approveUser);
+router.get("/", getAll);
+router.get("/:id", getById);
+router.post("/", createSchema, create);
+router.put("/:id", updateSchema, update);
+router.delete("/:id", _delete);
 module.exports = router;
 
 function authenticateSchema(req, res, next) {
@@ -45,7 +45,6 @@ function authenticate(req, res, next) {
 }
 
 function refreshToken(req, res, next) {
-	
 	const token = req.cookies.refreshToken;
 	const ipAddress = req.ip;
 	accountService
@@ -199,17 +198,15 @@ function updateSchema(req, res, next) {
 		firstName: Joi.string().empty(""),
 		lastName: Joi.string().empty(""),
 		email: Joi.string().email().empty(""),
-		password: Joi.string().min(6).empty(""),
-		confirmPassword: Joi.string().valid(Joi.ref("password")).empty(""),
 		company_name: Joi.string().required(),
 		company_address: Joi.string().required(),
 		mobile_number: Joi.string().required(),
 		company_email: Joi.string().required(),
 		company_logo: Joi.string().required(),
+		id: Joi.string().required(),
+		role: Joi.string().required(),
 	};
-
-	// only admins can update role
-	if (req.user.role === Role.Admin) {
+	if (req.body.role === Role.Admin) {
 		schemaRules.role = Joi.string().valid(Role.Admin, Role.User).empty("");
 	}
 
@@ -218,19 +215,22 @@ function updateSchema(req, res, next) {
 }
 
 function update(req, res, next) {
-	// users can update their own account and admins can update any account
-	if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
-		return res.status(401).json({ message: "Unauthorized" });
+	if (req.params.id != req.body.id) {
+		return res.status(401).json({
+			status: false,
+			p: req.params.id,
+			id: req.body,
+			message: "Your are not authorised do this  request",
+		});
 	}
 
 	accountService
 		.update(req.params.id, req.body)
 		.then((account) => res.json(account))
-		.catch(next);
+		.catch((err) => res.json(err));
 }
 
 function rejectUser(req, res, next) {
-	// users can update their own account and admins can update any account
 	if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
@@ -242,7 +242,6 @@ function rejectUser(req, res, next) {
 }
 
 function approveUser(req, res, next) {
-	// users can update their own account and admins can update any account
 	if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
 		return res.status(401).json({ message: "Unauthorized" });
 	}
